@@ -1,12 +1,17 @@
 from django.db import models
 from conferenceApp.models import Conference
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 
-def assert_in_range(value, start_date, end_date, field_name="session_day"):
-    if value is None or start_date is None or end_date is None:
-        return
-    if not (start_date <= value <= end_date):
-        raise ValidationError({field_name: "La date de la session doit appartenir à l’intervalle de la conférence."})
+def clean(self):
+        # Vérifier que la session est dans les dates de la conférence
+        if self.conference and self.session_day:
+            if not (self.Conference.start_date <= self.session_day <= self.Conference.end_date):
+                raise ValidationError("La date de la session doit être comprise entre les dates de la conférence.")
+
+        # Vérifier que l'heure de fin > heure de début
+        if self.start_time and self.end_time and self.end_time <= self.start_time:
+            raise ValidationError("L'heure de fin doit être supérieure à l'heure de début.")
 
     
 class Session(models.Model):
@@ -16,7 +21,10 @@ class Session(models.Model):
     session_day=models.DateField
     start_time=models.TimeField
     end_time=models.TimeField
-    room=models.CharField
+    room = models.CharField(
+        max_length=50,
+        validators=[RegexValidator(r'^[A-Za-z0-9]+$', "Le nom de la salle ne doit contenir que lettres et chiffres.")]
+    )
     created_at=models.DateTimeField(auto_now_add=True)
     updated_at=models.DateTimeField(auto_now=True)
     conference=models.ForeignKey("conferenceApp.Conference",on_delete=models.CASCADE,related_name="sessions")
